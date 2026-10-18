@@ -21,7 +21,7 @@ if LibStub == nil then
 end
 
 --- @class LibMacroSyntaxHighlight-1.0
-local LibMacroSyntaxHighlight = LibStub:NewLibrary("LibMacroSyntaxHighlight-1.0", 1)
+local LibMacroSyntaxHighlight = LibStub:NewLibrary("LibMacroSyntaxHighlight-1.0", 2)
 
 --- @class LibMacroSyntaxHighlight-1.0.Token
 --- @field public str string
@@ -30,6 +30,11 @@ local LibMacroSyntaxHighlight = LibStub:NewLibrary("LibMacroSyntaxHighlight-1.0"
 --- @field public to integer
 
 --- @alias LibMacroSyntaxHighlight-1.0.ColorTable { [LibMacroSyntaxHighlight-1.0.TokenType]: string }
+
+--- @class LibMacroSyntaxHighlight-1.0.State
+--- @field public inCommand boolean?
+--- @field public inConditions boolean?
+--- @field public expectUnit boolean?
 
 if LibMacroSyntaxHighlight == nil then
 	return
@@ -50,82 +55,171 @@ LibMacroSyntaxHighlight.TokenType = {
 	SLASH_COMMAND = 11,
 	CONDITION = 12,
 	TARGET_UNIT = 13,
-	SHEBANG = 14,
+	META = 14,
+	EQUALS = 15,
+	UNKNOWN = 16,
 }
+
+local TokenType = LibMacroSyntaxHighlight.TokenType
 
 --- @type LibMacroSyntaxHighlight-1.0.ColorTable
 local defaultColorTable = {
-	[LibMacroSyntaxHighlight.TokenType.NUMBER] = "ffb5cea8",
-	[LibMacroSyntaxHighlight.TokenType.SEMICOLON] = "ffdcdcaa",
-	[LibMacroSyntaxHighlight.TokenType.COLON] = "ffffffff",
-	[LibMacroSyntaxHighlight.TokenType.LEFT_BRACKET] = "ffffffff",
-	[LibMacroSyntaxHighlight.TokenType.RIGHT_BRACKET] = "ffffffff",
-	[LibMacroSyntaxHighlight.TokenType.COMMA] = "ffffffff",
-	[LibMacroSyntaxHighlight.TokenType.SLASH] = "ffffffff",
-	[LibMacroSyntaxHighlight.TokenType.SPELL_NAME] = "ffce9178",
-	[LibMacroSyntaxHighlight.TokenType.SLASH_COMMAND] = "ffdcdcaa",
-	[LibMacroSyntaxHighlight.TokenType.CONDITION] = "ff9cdcfe",
-	[LibMacroSyntaxHighlight.TokenType.TARGET_UNIT] = "ff4ec9b0",
-	[LibMacroSyntaxHighlight.TokenType.SHEBANG] = "ffffffff",
+	[TokenType.NUMBER] = "ffb5cea8",
+	[TokenType.SEMICOLON] = "ffdcdcaa",
+	[TokenType.COLON] = "ffffffff",
+	[TokenType.LEFT_BRACKET] = "ffffffff",
+	[TokenType.RIGHT_BRACKET] = "ffffffff",
+	[TokenType.COMMA] = "ffffffff",
+	[TokenType.SLASH] = "ffffffff",
+	[TokenType.SPELL_NAME] = "ffce9178",
+	[TokenType.SLASH_COMMAND] = "ffdcdcaa",
+	[TokenType.CONDITION] = "ff9cdcfe",
+	[TokenType.TARGET_UNIT] = "ff4ec9b0",
+	[TokenType.META] = "ffffffff",
+	[TokenType.EQUALS] = "ffffffff",
 }
 
 local bytes = {
-	["LINEBREAK_UNIX"] = string.byte("\n"),
-	["LINEBREAK_MAC"] = string.byte("\r"),
-	["WHITESPACE"] = string.byte(" "),
-	["TAB"] = string.byte("\t"),
-	["LEFT_BRACKET"] = string.byte("["),
-	["RIGHT_BRACKET"] = string.byte("]"),
-	["COMMA"] = string.byte(","),
-	["SEMICOLON"] = string.byte(";"),
-	["COLON"] = string.byte(":"),
-	["SLASH"] = string.byte("/"),
-	["NUM_0"] = string.byte("0"),
-	["NUM_9"] = string.byte("9"),
-	["AT"] = string.byte("@"),
-	["SHEBANG"] = string.byte("#")
+	LINEBREAK_UNIX = string.byte("\n"),
+	LINEBREAK_MAC = string.byte("\r"),
+	WHITESPACE = string.byte(" "),
+	TAB = string.byte("\t"),
+	LEFT_BRACKET = string.byte("["),
+	RIGHT_BRACKET = string.byte("]"),
+	COMMA = string.byte(","),
+	SEMICOLON = string.byte(";"),
+	COLON = string.byte(":"),
+	SLASH = string.byte("/"),
+	EQUALS = string.byte("="),
+	AT = string.byte("@"),
+	META = string.byte("#"),
+	PIPE = string.byte("|"),
+	COLOR_START_L = string.byte("c"),
+	COLOR_START_U = string.byte("C"),
+	COLOR_END_L = string.byte("r"),
+	COLOR_END_U = string.byte("R"),
 }
 
 local linebreaks = {
 	[bytes.LINEBREAK_UNIX] = true,
-	[bytes.LINEBREAK_MAC] = true
+	[bytes.LINEBREAK_MAC] = true,
 }
 
 local whitespace = {
 	[bytes.WHITESPACE] = true,
-	[bytes.TAB] = true
+	[bytes.TAB] = true,
+}
+
+local wordDelimiters = {
+	[bytes.LINEBREAK_UNIX] = true,
+	[bytes.LINEBREAK_MAC] = true,
+	[bytes.WHITESPACE] = true,
+	[bytes.TAB] = true,
+	[bytes.LEFT_BRACKET] = true,
+	[bytes.RIGHT_BRACKET] = true,
+	[bytes.COMMA] = true,
+	[bytes.SEMICOLON] = true,
+	[bytes.COLON] = true,
+	[bytes.SLASH] = true,
+	[bytes.EQUALS] = true,
+	[bytes.AT] = true,
+}
+
+local spellDelimiters = {
+	[bytes.LINEBREAK_UNIX] = true,
+	[bytes.LINEBREAK_MAC] = true,
+	[bytes.LEFT_BRACKET] = true,
+	[bytes.RIGHT_BRACKET] = true,
+	[bytes.COMMA] = true,
+	[bytes.SEMICOLON] = true,
 }
 
 --- @param text string
 --- @param position integer
+--- @return boolean
 local function IsStartOfLine(text, position)
 	if position == 1 then
 		return true
 	end
 
-	local previousByte = string.byte(text, position - 1)
-	if previousByte == nil then
-		return true
-	end
-
-	if linebreaks[previousByte] then
-		return true
-	end
-
-	return false
-end
-
-local function IsSpecialByte(byte)
-	for _, v in pairs(bytes) do
-		if v == byte then
-			return true
-		end
-	end
+	return linebreaks[string.byte(text, position - 1)] == true
 end
 
 --- @param text string
 --- @param position integer
---- @param state table
+--- @param delimiters table<integer, boolean>
+--- @return integer
+local function ReadUntil(text, position, delimiters)
+	repeat
+		position = position + 1
+		local byte = string.byte(text, position)
+	until byte == nil or delimiters[byte]
+
+	return position
+end
+
+--- @param text string
+--- @param position integer
+--- @param set table<integer, boolean>
+--- @return integer
+local function ReadWhile(text, position, set)
+	repeat
+		position = position + 1
+		local byte = string.byte(text, position)
+	until byte == nil or not set[byte]
+
+	return position
+end
+
+--- @param text string
+--- @param position integer
+--- @return integer
+local function ReadSpellName(text, position)
+	local nextPosition = ReadUntil(text, position, spellDelimiters)
+
+	while nextPosition - 1 > position and whitespace[string.byte(text, nextPosition - 1)] do
+		nextPosition = nextPosition - 1
+	end
+
+	return nextPosition
+end
+
+--- @param text string
+--- @param position integer
+--- @param state LibMacroSyntaxHighlight-1.0.State
+--- @return LibMacroSyntaxHighlight-1.0.TokenType
+--- @return integer
+local function ReadCondition(text, position, state)
+	local byte = string.byte(text, position)
+
+	if byte == bytes.COLON then
+		return TokenType.COLON, position + 1
+	elseif byte == bytes.SLASH then
+		return TokenType.SLASH, position + 1
+	elseif byte == bytes.EQUALS then
+		state.expectUnit = true
+		return TokenType.EQUALS, position + 1
+	elseif byte == bytes.AT then
+		return TokenType.TARGET_UNIT, ReadUntil(text, position, wordDelimiters)
+	end
+
+	local nextPosition = ReadUntil(text, position, wordDelimiters)
+
+	if state.expectUnit then
+		state.expectUnit = nil
+		return TokenType.TARGET_UNIT, nextPosition
+	end
+
+	if string.find(string.sub(text, position, nextPosition - 1), "^%d+$") then
+		return TokenType.NUMBER, nextPosition
+	end
+
+	return TokenType.CONDITION, nextPosition
+end
+
+--- @param text string
+--- @param position integer
+--- @param state LibMacroSyntaxHighlight-1.0.State
 --- @return LibMacroSyntaxHighlight-1.0.TokenType?
 --- @return integer?
 local function GetNextToken(text, position, state)
@@ -135,118 +229,85 @@ local function GetNextToken(text, position, state)
 	end
 
 	if linebreaks[byte] then
-		state.in_slash_command = nil
-		return LibMacroSyntaxHighlight.TokenType.LINEBREAK, position + 1
+		state.inCommand = nil
+		state.inConditions = nil
+		state.expectUnit = nil
+		return TokenType.LINEBREAK, position + 1
 	end
 
 	if whitespace[byte] then
-		while true do
-			position = position + 1
-			byte = string.byte(text, position)
+		return TokenType.WHITESPACE, ReadWhile(text, position, whitespace)
+	end
 
-			if byte == nil or not whitespace[byte] then
-				return LibMacroSyntaxHighlight.TokenType.WHITESPACE, position
-			end
+	if IsStartOfLine(text, position) then
+		if byte == bytes.SLASH then
+			state.inCommand = true
+			return TokenType.SLASH_COMMAND, ReadUntil(text, position, wordDelimiters)
+		elseif byte == bytes.META then
+			state.inCommand = true
+			return TokenType.META, ReadUntil(text, position, wordDelimiters)
 		end
 	end
 
-	if byte == bytes.SLASH and IsStartOfLine(text, position) then
-		while true do
-			position = position + 1
-			byte = string.byte(text, position)
-
-			if byte == nil or IsSpecialByte(byte) then
-				state.in_slash_command = true
-				return LibMacroSyntaxHighlight.TokenType.SLASH_COMMAND, position
-			end
-		end
-	elseif state.in_slash_command then
-		if byte == bytes.LEFT_BRACKET then
-			state.in_conditions = true
-			return LibMacroSyntaxHighlight.TokenType.LEFT_BRACKET, position + 1
-		elseif byte == bytes.RIGHT_BRACKET then
-			state.in_conditions = nil
-			return LibMacroSyntaxHighlight.TokenType.RIGHT_BRACKET, position + 1
-		elseif byte == bytes.COMMA then
-			return LibMacroSyntaxHighlight.TokenType.COMMA, position + 1
-		elseif byte == bytes.SEMICOLON then
-			return LibMacroSyntaxHighlight.TokenType.SEMICOLON, position + 1
-		elseif state.in_conditions then
-			if byte == bytes.COLON then
-				return LibMacroSyntaxHighlight.TokenType.COLON, position + 1
-			elseif byte >= bytes.NUM_0 and byte <= bytes.NUM_9 then
-				return LibMacroSyntaxHighlight.TokenType.NUMBER, position + 1
-			elseif byte == bytes.SLASH then
-				return LibMacroSyntaxHighlight.TokenType.SLASH, position + 1
-			elseif byte == bytes.AT then
-				while true do
-					position = position + 1
-					byte = string.byte(text, position)
-
-					if byte == nil or IsSpecialByte(byte) then
-						return LibMacroSyntaxHighlight.TokenType.TARGET_UNIT, position
-					end
-				end
-			else
-				while true do
-					position = position + 1
-					byte = string.byte(text, position)
-
-					if byte == nil or IsSpecialByte(byte) then
-						return LibMacroSyntaxHighlight.TokenType.CONDITION, position
-					end
-				end
-			end
-		else
-			while true do
-				position = position + 1
-				byte = string.byte(text, position)
-
-				if byte == nil or IsSpecialByte(byte) then
-					return LibMacroSyntaxHighlight.TokenType.SPELL_NAME, position
-				end
-			end
-		end
-	elseif byte == bytes.SHEBANG and IsStartOfLine(text, position) then
-		while true do
-			position = position + 1
-			byte = string.byte(text, position)
-
-			if byte == nil or IsSpecialByte(byte) then
-				return LibMacroSyntaxHighlight.TokenType.SHEBANG, position
-			end
-		end
+	if not state.inCommand then
+		return TokenType.UNKNOWN, ReadUntil(text, position, linebreaks)
 	end
+
+	if byte == bytes.LEFT_BRACKET then
+		state.inConditions = true
+		state.expectUnit = nil
+		return TokenType.LEFT_BRACKET, position + 1
+	elseif byte == bytes.RIGHT_BRACKET then
+		state.inConditions = nil
+		state.expectUnit = nil
+		return TokenType.RIGHT_BRACKET, position + 1
+	elseif byte == bytes.COMMA then
+		state.expectUnit = nil
+		return TokenType.COMMA, position + 1
+	elseif byte == bytes.SEMICOLON then
+		state.inConditions = nil
+		state.expectUnit = nil
+		return TokenType.SEMICOLON, position + 1
+	end
+
+	if state.inConditions then
+		return ReadCondition(text, position, state)
+	end
+
+	return TokenType.SPELL_NAME, ReadSpellName(text, position)
 end
 
+--- Convert a plaintext string to a list of raw tokens.
+---
+--- This method is generally not needed, as it's used internally by the library, but for debugging purposes it's helpful.
+---
 --- @param text string
 --- @return LibMacroSyntaxHighlight-1.0.Token[]
 function LibMacroSyntaxHighlight:Tokenize(text)
-	local currentPosition = 1
+	if type(text) ~= "string" then
+		error("bad argument #1 to 'Tokenize', expected string but got " .. type(text), 2)
+	end
+
+	--- @type LibMacroSyntaxHighlight-1.0.State
 	local state = {}
 
 	--- @type LibMacroSyntaxHighlight-1.0.Token[]
 	local result = {}
 
+	local currentPosition = 1
+
 	while true do
 		local tokenType, nextPosition = GetNextToken(text, currentPosition, state)
-		if tokenType == nil then
+		if tokenType == nil or nextPosition == nil then
 			break
 		end
 
-		--- @type LibMacroSyntaxHighlight-1.0.Token
-		local token = {
+		result[#result + 1] = {
 			str = string.sub(text, currentPosition, nextPosition - 1),
 			type = tokenType,
 			from = currentPosition,
 			to = nextPosition - 1
 		}
-
-		table.insert(result, token)
-
-		if nextPosition == nil then
-			break
-		end
 
 		currentPosition = nextPosition
 	end
@@ -254,39 +315,164 @@ function LibMacroSyntaxHighlight:Tokenize(text)
 	return result
 end
 
+--- Colorize a plaintext string.
+---
+--- This method accepts a plaintext macro string and applies color escape sequences based on the provided color table, or the default color table if none is
+--- provided.
+---
 --- @param text string
 --- @param colorTable LibMacroSyntaxHighlight-1.0.ColorTable?
---- @return string
-function LibMacroSyntaxHighlight:Colorize(text, colorTable)
-	assert(type(text) == "string", "bad argument #1, expected string but got " .. type(text))
+--- @param cursor integer?
+--- @return string colored
+--- @return integer? cursor
+function LibMacroSyntaxHighlight:Colorize(text, colorTable, cursor)
+	if type(text) ~= "string" then
+		error("bad argument #1 to 'Colorize', expected string but got " .. type(text), 2)
+	end
+
+	if colorTable ~= nil and type(colorTable) ~= "table" then
+		error("bad argument #2 to 'Colorize', expected table or nil but got " .. type(colorTable), 2)
+	end
+
+	if cursor ~= nil and type(cursor) ~= "number" then
+		error("bad argument #3 to 'Colorize', expected number or nil but got " .. type(cursor), 2)
+	end
+
+	if cursor ~= nil then
+		cursor = math.max(0, math.min(cursor, #text))
+	end
 
 	if #text == 0 then
-		return text
+		return text, cursor
 	end
 
 	colorTable = colorTable or defaultColorTable
 
-	local tokens = self:Tokenize(text)
-
-	--- @string[]
+	--- @type string[]
 	local result = {}
 
-	for _, token in ipairs(tokens) do
-		if colorTable[token.type] ~= nil then
-			table.insert(result, "|c" .. colorTable[token.type] .. token.str .. "|r")
+	--- @type string[]
+	local group = {}
+
+	--- @type string?
+	local groupColor = nil
+
+	local rawOffset = 0
+	local coloredOffset = 0
+
+	--- @type integer?
+	local mappedCursor = nil
+
+	local function Flush()
+		if #group == 0 then
+			return
+		end
+
+		local str = table.concat(group)
+		local prefix = groupColor ~= nil and "|c" .. groupColor or ""
+		local suffix = groupColor ~= nil and "|r" or ""
+
+		if cursor ~= nil and mappedCursor == nil then
+			if cursor <= rawOffset then
+				mappedCursor = coloredOffset
+			elseif cursor < rawOffset + #str then
+				mappedCursor = coloredOffset + #prefix + cursor - rawOffset
+			end
+		end
+
+		result[#result + 1] = prefix .. str .. suffix
+		rawOffset = rawOffset + #str
+		coloredOffset = coloredOffset + #prefix + #str + #suffix
+		group = {}
+	end
+
+	for _, token in ipairs(self:Tokenize(text)) do
+		local color = colorTable[token.type]
+
+		if color ~= groupColor and not (color == nil and token.type == TokenType.WHITESPACE) then
+			Flush()
+			groupColor = color
+		end
+
+		group[#group + 1] = token.str
+	end
+
+	Flush()
+
+	if cursor ~= nil and mappedCursor == nil then
+		mappedCursor = coloredOffset
+	end
+
+	return table.concat(result), mappedCursor
+end
+
+--- Strip all unescaped color code sequences from a string, this does preserve escaped color code sequences.
+---
+--- Optionally accepts a `cursor` parameter, which indicates the cursor position within the colored text, if specified, this will return the corresponding
+--- cursor position in the plaintext string.
+---
+--- @param text string
+--- @param cursor integer?
+--- @return string stripped
+--- @return integer? cursor
+function LibMacroSyntaxHighlight:StripColors(text, cursor)
+	if type(text) ~= "string" then
+		error("bad argument #1 to 'StripColors', expected string but got " .. type(text), 2)
+	end
+
+	if cursor ~= nil and type(cursor) ~= "number" then
+		error("bad argument #2 to 'StripColors', expected number or nil but got " .. type(cursor), 2)
+	end
+
+	--- @type string[]
+	local result = {}
+
+	local position = 1
+	local copyFrom = 1
+	local removedBeforeCursor = 0
+
+	while true do
+		local pipe = string.find(text, "|", position, true)
+		if pipe == nil then
+			break
+		end
+
+		local nextByte = string.byte(text, pipe + 1)
+		local codeLength = nil
+
+		if nextByte == bytes.PIPE then
+			position = pipe + 2
+		elseif (nextByte == bytes.COLOR_START_L or nextByte == bytes.COLOR_START_U) and string.find(text, "^%x%x%x%x%x%x%x%x", pipe + 2) then
+			codeLength = 10
+		elseif nextByte == bytes.COLOR_END_L or nextByte == bytes.COLOR_END_U then
+			codeLength = 2
 		else
-			table.insert(result, token.str)
+			position = pipe + 1
+		end
+
+		if codeLength ~= nil then
+			local codeOffset = pipe - 1
+
+			if cursor ~= nil and cursor > codeOffset then
+				removedBeforeCursor = removedBeforeCursor + math.min(codeLength, cursor - codeOffset)
+			end
+
+			result[#result + 1] = string.sub(text, copyFrom, pipe - 1)
+			position = pipe + codeLength
+			copyFrom = position
 		end
 	end
 
-	return table.concat(result)
+	result[#result + 1] = string.sub(text, copyFrom)
+
+	return table.concat(result), cursor ~= nil and cursor - removedBeforeCursor or nil
 end
 
 --- @return LibMacroSyntaxHighlight-1.0.ColorTable
 function LibMacroSyntaxHighlight:GetDefaultColorTable()
 	local result = {}
 
-	for k, v in pairs(LibMacroSyntaxHighlight.TokenType) do
+	for k, v in pairs(defaultColorTable) do
 		result[k] = v
 	end
 
