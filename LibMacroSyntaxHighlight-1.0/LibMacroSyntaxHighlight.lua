@@ -24,27 +24,27 @@ if LibStub == nil then
 	error("LibMacroSyntaxHighlight-1.0 requires LibStub")
 end
 
---- @class LibMacroSyntaxHighlight-1.0
+---@class LibMacroSyntaxHighlight-1.0
 local LibMacroSyntaxHighlight = LibStub:NewLibrary("LibMacroSyntaxHighlight-1.0", 2)
 
---- @class LibMacroSyntaxHighlight-1.0.Token
---- @field public str string
---- @field public type LibMacroSyntaxHighlight-1.0.TokenType
---- @field public from integer
---- @field public to integer
+---@class LibMacroSyntaxHighlight-1.0.Token
+---@field public str string
+---@field public type LibMacroSyntaxHighlight-1.0.TokenType
+---@field public from integer
+---@field public to integer
 
---- @alias LibMacroSyntaxHighlight-1.0.ColorTable { [LibMacroSyntaxHighlight-1.0.TokenType]: string }
+---@alias LibMacroSyntaxHighlight-1.0.ColorTable { [LibMacroSyntaxHighlight-1.0.TokenType]: string }
 
---- @class LibMacroSyntaxHighlight-1.0.State
---- @field public inCommand boolean?
---- @field public inConditions boolean?
---- @field public expectUnit boolean?
+---@class LibMacroSyntaxHighlight-1.0.State
+---@field public inCommand boolean?
+---@field public inConditions boolean?
+---@field public expectUnit boolean?
 
 if LibMacroSyntaxHighlight == nil then
 	return
 end
 
---- @enum LibMacroSyntaxHighlight-1.0.TokenType
+---@enum LibMacroSyntaxHighlight-1.0.TokenType
 LibMacroSyntaxHighlight.TokenType = {
 	NUMBER = 1,
 	WHITESPACE = 2,
@@ -66,7 +66,7 @@ LibMacroSyntaxHighlight.TokenType = {
 
 local TokenType = LibMacroSyntaxHighlight.TokenType
 
---- @type LibMacroSyntaxHighlight-1.0.ColorTable
+---@type LibMacroSyntaxHighlight-1.0.ColorTable
 local defaultColorTable = {
 	[TokenType.NUMBER] = "ffb5cea8",
 	[TokenType.SEMICOLON] = "ffdcdcaa",
@@ -138,9 +138,9 @@ local spellDelimiters = {
 	[bytes.SEMICOLON] = true,
 }
 
---- @param text string
---- @param position integer
---- @return boolean
+---@param text string
+---@param position integer
+---@return boolean
 local function IsStartOfLine(text, position)
 	if position == 1 then
 		return true
@@ -149,10 +149,10 @@ local function IsStartOfLine(text, position)
 	return linebreaks[string.byte(text, position - 1)] == true
 end
 
---- @param text string
---- @param position integer
---- @param delimiters table<integer, boolean>
---- @return integer
+---@param text string
+---@param position integer
+---@param delimiters table<integer, boolean>
+---@return integer
 local function ReadUntil(text, position, delimiters)
 	repeat
 		position = position + 1
@@ -162,10 +162,10 @@ local function ReadUntil(text, position, delimiters)
 	return position
 end
 
---- @param text string
---- @param position integer
---- @param set table<integer, boolean>
---- @return integer
+---@param text string
+---@param position integer
+---@param set table<integer, boolean>
+---@return integer
 local function ReadWhile(text, position, set)
 	repeat
 		position = position + 1
@@ -175,9 +175,9 @@ local function ReadWhile(text, position, set)
 	return position
 end
 
---- @param text string
---- @param position integer
---- @return integer
+---@param text string
+---@param position integer
+---@return integer
 local function ReadSpellName(text, position)
 	local nextPosition = ReadUntil(text, position, spellDelimiters)
 
@@ -188,11 +188,11 @@ local function ReadSpellName(text, position)
 	return nextPosition
 end
 
---- @param text string
---- @param position integer
---- @param state LibMacroSyntaxHighlight-1.0.State
---- @return LibMacroSyntaxHighlight-1.0.TokenType
---- @return integer
+---@param text string
+---@param position integer
+---@param state LibMacroSyntaxHighlight-1.0.State
+---@return LibMacroSyntaxHighlight-1.0.TokenType
+---@return integer
 local function ReadCondition(text, position, state)
 	local byte = string.byte(text, position)
 
@@ -221,11 +221,11 @@ local function ReadCondition(text, position, state)
 	return TokenType.CONDITION, nextPosition
 end
 
---- @param text string
---- @param position integer
---- @param state LibMacroSyntaxHighlight-1.0.State
---- @return LibMacroSyntaxHighlight-1.0.TokenType?
---- @return integer?
+---@param text string
+---@param position integer
+---@param state LibMacroSyntaxHighlight-1.0.State
+---@return LibMacroSyntaxHighlight-1.0.TokenType?
+---@return integer?
 local function GetNextToken(text, position, state)
 	local byte = string.byte(text, position)
 	if byte == nil then
@@ -281,21 +281,21 @@ local function GetNextToken(text, position, state)
 	return TokenType.SPELL_NAME, ReadSpellName(text, position)
 end
 
---- Convert a plaintext string to a list of raw tokens.
+---Convert a plaintext string to a list of raw tokens.
 ---
---- This method is generally not needed, as it's used internally by the library, but for debugging purposes it's helpful.
+---This method is generally not needed, as it's used internally by the library, but for debugging purposes it's helpful.
 ---
---- @param text string
---- @return LibMacroSyntaxHighlight-1.0.Token[]
+---@param text string
+---@return LibMacroSyntaxHighlight-1.0.Token[]
 function LibMacroSyntaxHighlight:Tokenize(text)
 	if type(text) ~= "string" then
 		error("bad argument #1 to 'Tokenize', expected string but got " .. type(text), 2)
 	end
 
-	--- @type LibMacroSyntaxHighlight-1.0.State
+	---@type LibMacroSyntaxHighlight-1.0.State
 	local state = {}
 
-	--- @type LibMacroSyntaxHighlight-1.0.Token[]
+	---@type LibMacroSyntaxHighlight-1.0.Token[]
 	local result = {}
 
 	local currentPosition = 1
@@ -319,16 +319,16 @@ function LibMacroSyntaxHighlight:Tokenize(text)
 	return result
 end
 
---- Colorize a plaintext string.
+---Colorize a plaintext string.
 ---
---- This method accepts a plaintext macro string and applies color escape sequences based on the provided color table, or the default color table if none is
---- provided.
+---This method accepts a plaintext macro string and applies color escape sequences based on the provided color table, or the default color table if none is
+---provided.
 ---
---- @param text string
---- @param colorTable LibMacroSyntaxHighlight-1.0.ColorTable?
---- @param cursor integer?
---- @return string colored
---- @return integer? cursor
+---@param text string
+---@param colorTable LibMacroSyntaxHighlight-1.0.ColorTable?
+---@param cursor integer?
+---@return string colored
+---@return integer? cursor
 function LibMacroSyntaxHighlight:Colorize(text, colorTable, cursor)
 	if type(text) ~= "string" then
 		error("bad argument #1 to 'Colorize', expected string but got " .. type(text), 2)
@@ -352,19 +352,19 @@ function LibMacroSyntaxHighlight:Colorize(text, colorTable, cursor)
 
 	colorTable = colorTable or defaultColorTable
 
-	--- @type string[]
+	---@type string[]
 	local result = {}
 
-	--- @type string[]
+	---@type string[]
 	local group = {}
 
-	--- @type string?
+	---@type string?
 	local groupColor = nil
 
 	local rawOffset = 0
 	local coloredOffset = 0
 
-	--- @type integer?
+	---@type integer?
 	local mappedCursor = nil
 
 	local function Flush()
@@ -410,15 +410,15 @@ function LibMacroSyntaxHighlight:Colorize(text, colorTable, cursor)
 	return table.concat(result), mappedCursor
 end
 
---- Strip all unescaped color code sequences from a string, this does preserve escaped color code sequences.
+---Strip all unescaped color code sequences from a string, this does preserve escaped color code sequences.
 ---
---- Optionally accepts a `cursor` parameter, which indicates the cursor position within the colored text, if specified, this will return the corresponding
---- cursor position in the plaintext string.
+---Optionally accepts a `cursor` parameter, which indicates the cursor position within the colored text, if specified, this will return the corresponding
+---cursor position in the plaintext string.
 ---
---- @param text string
---- @param cursor integer?
---- @return string stripped
---- @return integer? cursor
+---@param text string
+---@param cursor integer?
+---@return string stripped
+---@return integer? cursor
 function LibMacroSyntaxHighlight:StripColors(text, cursor)
 	if type(text) ~= "string" then
 		error("bad argument #1 to 'StripColors', expected string but got " .. type(text), 2)
@@ -428,7 +428,7 @@ function LibMacroSyntaxHighlight:StripColors(text, cursor)
 		error("bad argument #2 to 'StripColors', expected number or nil but got " .. type(cursor), 2)
 	end
 
-	--- @type string[]
+	---@type string[]
 	local result = {}
 
 	local position = 1
@@ -472,7 +472,7 @@ function LibMacroSyntaxHighlight:StripColors(text, cursor)
 	return table.concat(result), cursor ~= nil and cursor - removedBeforeCursor or nil
 end
 
---- @return LibMacroSyntaxHighlight-1.0.ColorTable
+---@return LibMacroSyntaxHighlight-1.0.ColorTable
 function LibMacroSyntaxHighlight:GetDefaultColorTable()
 	local result = {}
 

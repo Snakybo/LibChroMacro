@@ -20,78 +20,37 @@
 -- OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 -- SOFTWARE.
 
---- @diagnostic disable-next-line: duplicate-doc-alias
---- @alias AceGUIWidgetType
---- | "ColoredMacroEditBox"
+if LibStub == nil then
+	error("LibMacroSyntaxHighlight-1.0 requires LibStub")
+end
 
 local Type, Version = "ColoredMacroEditBox", 1
 
---- @type AceGUI-3.0
-local AceGUI = LibStub and LibStub("AceGUI-3.0", true)
+local AceGUI = LibStub("AceGUI-3.0", true)
+local LibMacroSyntaxHighlight = LibStub("LibMacroSyntaxHighlight-1.0", true)
 
---- @type LibMacroSyntaxHighlight-1.0
-local LibMacroSyntaxHighlight = LibStub and LibStub("LibMacroSyntaxHighlight-1.0", true)
-
-if AceGUI == nil or (AceGUI:GetWidgetVersion(Type) or 0) >= Version then
-	return
-end
-
-if LibMacroSyntaxHighlight == nil then
+if AceGUI == nil or LibMacroSyntaxHighlight == nil or (AceGUI:GetWidgetVersion(Type) or 0) >= Version then
 	return
 end
 
 local DEBOUNCE_DURATION = 0.05
 
---[[-----------------------------------------------------------------------------
-Scripts
--------------------------------------------------------------------------------]]
+---@alias AceGUIWidgetType
+---| "ColoredMacroEditBox"
 
---- @param frame Button
-local function Button_OnClick(frame)
-	--- @type ColoredMacroEditBox
-	--- @diagnostic disable-next-line: undefined-field
-	local self = frame.obj
+---@class ColoredMacroEditBox : AceGUIMultiLineEditBox
+---@field protected colorTable LibMacroSyntaxHighlight-1.0.ColorTable
+---@field protected debounce FunctionContainer?
+---@field protected lastColored string?
+local ColoredMacroEditBox = {}
 
-	--- @diagnostic disable-next-line: invisible
-	self.editBox:ClearFocus()
-	if not self:Fire("OnEnterPressed", self:GetText()) then
-		--- @diagnostic disable-next-line: invisible
-		self.button:Disable()
-	end
-end
-
---- @param frame EditBox
---- @param userInput boolean
-local function EditBox_OnTextChanged(frame, userInput)
-	if not userInput then
-		return
-	end
-
-	--- @type ColoredMacroEditBox
-	--- @diagnostic disable-next-line: undefined-field
-	local self = frame.obj
-
-	self:Fire("OnTextChanged", self:GetText())
-
-	--- @diagnostic disable-next-line: invisible
-	self.button:Enable()
-
-	self:Update(false)
-end
-
---[[-----------------------------------------------------------------------------
-Methods
--------------------------------------------------------------------------------]]
-
---- @class ColoredMacroEditBox : AceGUIMultiLineEditBox
-local Widget = {}
-
-function Widget:OnAcquire()
+---@protected
+function ColoredMacroEditBox:OnAcquire()
 	self:BaseOnAcquire()
 
-	self.colorTable = LibMacroSyntaxHighlight:GetDefaultColorTable() --- @private
-	self.debounce = nil --- @private
-	self.lastColored = nil --- @private
+	self.colorTable = LibMacroSyntaxHighlight:GetDefaultColorTable()
+	self.debounce = nil
+	self.lastColored = nil
 
 	self.editBox:SetMaxBytes(0)
 	self.editBox:SetCountInvisibleLetters(false)
@@ -100,8 +59,8 @@ function Widget:OnAcquire()
 	self:SetLabelColor(NORMAL_FONT_COLOR)
 end
 
---- @param immediate boolean?
-function Widget:Update(immediate)
+---@param immediate boolean?
+function ColoredMacroEditBox:Update(immediate)
 	if immediate == false then
 		if self.debounce ~= nil then
 			self.debounce:Cancel()
@@ -131,36 +90,36 @@ function Widget:Update(immediate)
 	end
 end
 
---- @param text string
-function Widget:SetText(text)
+---@param text string
+function ColoredMacroEditBox:SetText(text)
 	local colored = LibMacroSyntaxHighlight:Colorize(text, self.colorTable)
 
 	self.lastColored = colored
 	self.editBox:SetText(colored)
 end
 
---- @return string
-function Widget:GetText()
+---@return string
+function ColoredMacroEditBox:GetText()
 	local colored = self.editBox:GetText()
 	local plain = LibMacroSyntaxHighlight:StripColors(colored)
 
 	return plain
 end
 
---- @param position integer
-function Widget:SetCursorPosition(position)
+---@param position integer
+function ColoredMacroEditBox:SetCursorPosition(position)
 	self.editBox:SetCursorPosition(self:ToColoredPosition(position))
 end
 
---- @return integer
-function Widget:GetCursorPosition()
+---@return integer
+function ColoredMacroEditBox:GetCursorPosition()
 	local _, cursor = LibMacroSyntaxHighlight:StripColors(self.editBox:GetText(), self.editBox:GetCursorPosition())
 	return cursor --[[@as integer]]
 end
 
---- @param from integer?
---- @param to integer?
-function Widget:HighlightText(from, to)
+---@param from integer?
+---@param to integer?
+function ColoredMacroEditBox:HighlightText(from, to)
 	if from == nil and to == nil then
 		self.editBox:HighlightText()
 		return
@@ -179,20 +138,20 @@ function Widget:HighlightText(from, to)
 	self.editBox:HighlightText(coloredFrom, coloredTo)
 end
 
---- @param colorTable LibMacroSyntaxHighlight-1.0.ColorTable?
-function Widget:SetColorTable(colorTable)
+---@param colorTable LibMacroSyntaxHighlight-1.0.ColorTable?
+function ColoredMacroEditBox:SetColorTable(colorTable)
 	self.colorTable = colorTable or LibMacroSyntaxHighlight:GetDefaultColorTable()
 end
 
---- @param color ColorMixin
-function Widget:SetLabelColor(color)
+---@param color ColorMixin
+function ColoredMacroEditBox:SetLabelColor(color)
 	self.label:SetTextColor(color:GetRGBA())
 end
 
---- @private
---- @param position integer
---- @return integer
-function Widget:ToColoredPosition(position)
+---@protected
+---@param position integer
+---@return integer
+function ColoredMacroEditBox:ToColoredPosition(position)
 	if position == nil or position < 0 then
 		return position or 0
 	end
@@ -203,25 +162,50 @@ function Widget:ToColoredPosition(position)
 	return cursor --[[@as integer]]
 end
 
---[[-----------------------------------------------------------------------------
-Constructor
--------------------------------------------------------------------------------]]
+---@protected
+---@param frame Button&{ obj: ColoredMacroEditBox }
+function ColoredMacroEditBox.Button_OnClick(frame)
+	local self = frame.obj
 
-local function Constructor()
-	--- @class ColoredMacroEditBox
-	local widget = AceGUI:Create("MultiLineEditBox") --[[@as AceGUIMultiLineEditBox]]
+	self.editBox:ClearFocus()
+	if not self:Fire("OnEnterPressed", self:GetText()) then
+		self.button:Disable()
+	end
+end
+
+---@protected
+---@param frame EditBox&{ obj: ColoredMacroEditBox }
+---@param userInput boolean
+function ColoredMacroEditBox.EditBox_OnTextChanged(frame, userInput)
+	if not userInput then
+		return
+	end
+
+	local self = frame.obj
+
+	self:Fire("OnTextChanged", self:GetText())
+	self.button:Enable()
+	self:Update(false)
+end
+
+---@private
+function ColoredMacroEditBox.NewColoredMacroEditBox()
+	local widget = AceGUI:Create("MultiLineEditBox") --[[@as ColoredMacroEditBox]]
 	widget.type = Type
 
-	widget.button:SetScript("OnClick", Button_OnClick)
-	widget.editBox:SetScript("OnTextChanged", EditBox_OnTextChanged)
+	widget.button:SetScript("OnClick", ColoredMacroEditBox.Button_OnClick)
+	widget.editBox:SetScript("OnTextChanged", ColoredMacroEditBox.EditBox_OnTextChanged)
 
-	widget.BaseOnAcquire = widget.OnAcquire --- @private
+	---@private
+	widget.BaseOnAcquire = widget.OnAcquire
 
-	for method, func in pairs(Widget) do
-		widget[method] = func
+	for method, func in pairs(ColoredMacroEditBox) do
+		if method ~= "NewColoredMacroEditBox" then
+			widget[method] = func
+		end
 	end
 
 	return AceGUI:RegisterAsWidget(widget)
 end
 
-AceGUI:RegisterWidgetType(Type, Constructor, Version)
+AceGUI:RegisterWidgetType(Type, ColoredMacroEditBox.NewColoredMacroEditBox, Version)
