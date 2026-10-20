@@ -26,7 +26,7 @@ end
 
 ---@class LibChroMacro
 local LibChroMacro = LibStub:NewLibrary("LibChroMacro", 1)
-LibChroMacro
+
 ---@class LibChroMacro.Token
 ---@field public str string
 ---@field public type LibChroMacro.TokenType
