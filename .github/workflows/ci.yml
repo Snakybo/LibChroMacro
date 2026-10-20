@@ -3,7 +3,10 @@ name: CI
 on:
   push:
     branches:
-      - "*"
+      - "**"
+  pull_request:
+    branches:
+      - "**"
 
 jobs:
   build:
@@ -22,6 +25,6 @@ jobs:
       uses: "actions/upload-artifact@v4"
       if: success()
       with:
-        name: "LibMacroSyntaxHighlight-1.0"
+        name: "LibChroMacro"
         path: .release/
         include-hidden-files: true

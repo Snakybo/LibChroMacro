@@ -21,31 +21,31 @@
 -- SOFTWARE.
 
 if LibStub == nil then
-	error("LibMacroSyntaxHighlight-1.0 requires LibStub")
+	error("LibChroMacro requires LibStub")
 end
 
----@class LibMacroSyntaxHighlight-1.0
-local LibMacroSyntaxHighlight = LibStub:NewLibrary("LibMacroSyntaxHighlight-1.0", 2)
-
----@class LibMacroSyntaxHighlight-1.0.Token
+---@class LibChroMacro
+local LibChroMacro = LibStub:NewLibrary("LibChroMacro", 1)
+LibChroMacro
+---@class LibChroMacro.Token
 ---@field public str string
----@field public type LibMacroSyntaxHighlight-1.0.TokenType
+---@field public type LibChroMacro.TokenType
 ---@field public from integer
 ---@field public to integer
 
----@alias LibMacroSyntaxHighlight-1.0.ColorTable { [LibMacroSyntaxHighlight-1.0.TokenType]: string }
+---@alias LibChroMacro.ColorTable { [LibChroMacro.TokenType]: string }
 
----@class LibMacroSyntaxHighlight-1.0.State
+---@class LibChroMacro.State
 ---@field public inCommand boolean?
 ---@field public inConditions boolean?
 ---@field public expectUnit boolean?
 
-if LibMacroSyntaxHighlight == nil then
+if LibChroMacro == nil then
 	return
 end
 
----@enum LibMacroSyntaxHighlight-1.0.TokenType
-LibMacroSyntaxHighlight.TokenType = {
+---@enum LibChroMacro.TokenType
+LibChroMacro.TokenType = {
 	NUMBER = 1,
 	WHITESPACE = 2,
 	LINEBREAK = 3,
@@ -64,9 +64,9 @@ LibMacroSyntaxHighlight.TokenType = {
 	UNKNOWN = 16,
 }
 
-local TokenType = LibMacroSyntaxHighlight.TokenType
+local TokenType = LibChroMacro.TokenType
 
----@type LibMacroSyntaxHighlight-1.0.ColorTable
+---@type LibChroMacro.ColorTable
 local defaultColorTable = {
 	[TokenType.NUMBER] = "ffb5cea8",
 	[TokenType.SEMICOLON] = "ffdcdcaa",
@@ -190,8 +190,8 @@ end
 
 ---@param text string
 ---@param position integer
----@param state LibMacroSyntaxHighlight-1.0.State
----@return LibMacroSyntaxHighlight-1.0.TokenType
+---@param state LibChroMacro.State
+---@return LibChroMacro.TokenType
 ---@return integer
 local function ReadCondition(text, position, state)
 	local byte = string.byte(text, position)
@@ -223,8 +223,8 @@ end
 
 ---@param text string
 ---@param position integer
----@param state LibMacroSyntaxHighlight-1.0.State
----@return LibMacroSyntaxHighlight-1.0.TokenType?
+---@param state LibChroMacro.State
+---@return LibChroMacro.TokenType?
 ---@return integer?
 local function GetNextToken(text, position, state)
 	local byte = string.byte(text, position)
@@ -286,16 +286,16 @@ end
 ---This method is generally not needed, as it's used internally by the library, but for debugging purposes it's helpful.
 ---
 ---@param text string
----@return LibMacroSyntaxHighlight-1.0.Token[]
-function LibMacroSyntaxHighlight:Tokenize(text)
+---@return LibChroMacro.Token[]
+function LibChroMacro:Tokenize(text)
 	if type(text) ~= "string" then
 		error("bad argument #1 to 'Tokenize', expected string but got " .. type(text), 2)
 	end
 
-	---@type LibMacroSyntaxHighlight-1.0.State
+	---@type LibChroMacro.State
 	local state = {}
 
-	---@type LibMacroSyntaxHighlight-1.0.Token[]
+	---@type LibChroMacro.Token[]
 	local result = {}
 
 	local currentPosition = 1
@@ -325,11 +325,11 @@ end
 ---provided.
 ---
 ---@param text string
----@param colorTable LibMacroSyntaxHighlight-1.0.ColorTable?
+---@param colorTable LibChroMacro.ColorTable?
 ---@param cursor integer?
 ---@return string colored
 ---@return integer? cursor
-function LibMacroSyntaxHighlight:Colorize(text, colorTable, cursor)
+function LibChroMacro:Colorize(text, colorTable, cursor)
 	if type(text) ~= "string" then
 		error("bad argument #1 to 'Colorize', expected string but got " .. type(text), 2)
 	end
@@ -419,7 +419,7 @@ end
 ---@param cursor integer?
 ---@return string stripped
 ---@return integer? cursor
-function LibMacroSyntaxHighlight:StripColors(text, cursor)
+function LibChroMacro:StripColors(text, cursor)
 	if type(text) ~= "string" then
 		error("bad argument #1 to 'StripColors', expected string but got " .. type(text), 2)
 	end
@@ -472,8 +472,8 @@ function LibMacroSyntaxHighlight:StripColors(text, cursor)
 	return table.concat(result), cursor ~= nil and cursor - removedBeforeCursor or nil
 end
 
----@return LibMacroSyntaxHighlight-1.0.ColorTable
-function LibMacroSyntaxHighlight:GetDefaultColorTable()
+---@return LibChroMacro.ColorTable
+function LibChroMacro:GetDefaultColorTable()
 	local result = {}
 
 	for k, v in pairs(defaultColorTable) do

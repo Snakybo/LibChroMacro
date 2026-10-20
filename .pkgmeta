@@ -1,4 +1,4 @@
-package-as: LibMacroSyntaxHighlight-1.0
+package-as: LibChroMacro
 enable-nolib-creation: no
 
 ignore:
