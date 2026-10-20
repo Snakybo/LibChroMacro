@@ -1,4 +1,3 @@
-package-as: LibChroMacro
 enable-nolib-creation: no
 
 ignore:
