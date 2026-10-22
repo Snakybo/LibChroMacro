@@ -5,6 +5,7 @@ ignore:
   - .gitattributes
   - .gitignore
   - .wowluarc.json
+  - API.md
   - CONTRIBUTING.md
   - README.md
 
