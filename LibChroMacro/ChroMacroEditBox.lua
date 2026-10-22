@@ -35,16 +35,16 @@ end
 
 local DEBOUNCE_DURATION = 0.05
 
----@alias AceGUIWidgetType
----| "ChroMacroEditBox"
+--- @alias AceGUIWidgetType
+--- | "ChroMacroEditBox"
 
----@class ChroMacroEditBox : AceGUIMultiLineEditBox
----@field protected colorTable LibChroMacro.ColorTable
----@field protected debounce FunctionContainer?
----@field protected lastColored string?
+--- @class ChroMacroEditBox : AceGUIMultiLineEditBox
+--- @field protected colorTable LibChroMacro.ColorTable
+--- @field protected debounce FunctionContainer?
+--- @field protected lastColored string?
 local ChroMacroEditBox = {}
 
----@protected
+--- @protected
 function ChroMacroEditBox:OnAcquire()
 	self:BaseOnAcquire()
 
@@ -59,7 +59,7 @@ function ChroMacroEditBox:OnAcquire()
 	self:SetLabelColor(NORMAL_FONT_COLOR)
 end
 
----@param immediate boolean?
+--- @param immediate boolean?
 function ChroMacroEditBox:Update(immediate)
 	if immediate == false then
 		if self.debounce ~= nil then
@@ -90,7 +90,7 @@ function ChroMacroEditBox:Update(immediate)
 	end
 end
 
----@param text string
+--- @param text string
 function ChroMacroEditBox:SetText(text)
 	local colored = LibChroMacro:Colorize(text, self.colorTable)
 
@@ -98,7 +98,7 @@ function ChroMacroEditBox:SetText(text)
 	self.editBox:SetText(colored)
 end
 
----@return string
+--- @return string
 function ChroMacroEditBox:GetText()
 	local colored = self.editBox:GetText()
 	local plain = LibChroMacro:StripColors(colored)
@@ -106,19 +106,19 @@ function ChroMacroEditBox:GetText()
 	return plain
 end
 
----@param position integer
+--- @param position integer
 function ChroMacroEditBox:SetCursorPosition(position)
 	self.editBox:SetCursorPosition(self:ToColoredPosition(position))
 end
 
----@return integer
+--- @return integer
 function ChroMacroEditBox:GetCursorPosition()
 	local _, cursor = LibChroMacro:StripColors(self.editBox:GetText(), self.editBox:GetCursorPosition())
 	return cursor --[[@as integer]]
 end
 
----@param from integer?
----@param to integer?
+--- @param from integer?
+--- @param to integer?
 function ChroMacroEditBox:HighlightText(from, to)
 	if from == nil and to == nil then
 		self.editBox:HighlightText()
@@ -138,19 +138,19 @@ function ChroMacroEditBox:HighlightText(from, to)
 	self.editBox:HighlightText(coloredFrom, coloredTo)
 end
 
----@param colorTable LibChroMacro.ColorTable?
+--- @param colorTable LibChroMacro.ColorTable?
 function ChroMacroEditBox:SetColorTable(colorTable)
 	self.colorTable = colorTable or LibChroMacro:GetDefaultColorTable()
 end
 
----@param color ColorMixin
+--- @param color ColorMixin
 function ChroMacroEditBox:SetLabelColor(color)
 	self.label:SetTextColor(color:GetRGBA())
 end
 
----@protected
----@param position integer
----@return integer
+--- @protected
+--- @param position integer
+--- @return integer
 function ChroMacroEditBox:ToColoredPosition(position)
 	if position == nil or position < 0 then
 		return position or 0
@@ -162,8 +162,8 @@ function ChroMacroEditBox:ToColoredPosition(position)
 	return cursor --[[@as integer]]
 end
 
----@protected
----@param frame Button&{ obj: ChroMacroEditBox }
+--- @protected
+--- @param frame Button&{ obj: ChroMacroEditBox }
 function ChroMacroEditBox.Button_OnClick(frame)
 	local self = frame.obj
 
@@ -173,9 +173,9 @@ function ChroMacroEditBox.Button_OnClick(frame)
 	end
 end
 
----@protected
----@param frame EditBox&{ obj: ChroMacroEditBox }
----@param userInput boolean
+--- @protected
+--- @param frame EditBox&{ obj: ChroMacroEditBox }
+--- @param userInput boolean
 function ChroMacroEditBox.EditBox_OnTextChanged(frame, userInput)
 	if not userInput then
 		return
@@ -188,7 +188,7 @@ function ChroMacroEditBox.EditBox_OnTextChanged(frame, userInput)
 	self:Update(false)
 end
 
----@private
+--- @private
 function ChroMacroEditBox.NewColoredMacroEditBox()
 	--- @class ChroMacroEditBox
 	local widget = AceGUI:Create("MultiLineEditBox")
@@ -197,7 +197,7 @@ function ChroMacroEditBox.NewColoredMacroEditBox()
 	widget.button:SetScript("OnClick", ChroMacroEditBox.Button_OnClick)
 	widget.editBox:SetScript("OnTextChanged", ChroMacroEditBox.EditBox_OnTextChanged)
 
-	---@private
+	--- @private
 	widget.BaseOnAcquire = widget.OnAcquire
 
 	for method, func in pairs(ChroMacroEditBox) do
