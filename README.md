@@ -4,10 +4,15 @@ LibChroMacro is a library for World of Warcraft that can add syntax highlighting
 
 ## Getting started
 
+### Dependencies
+
+* [LibStub](https://www.wowace.com/projects/libstub)
+
 ### Embedding
 
 ```yaml
 externals:
+  Libs/LibStub: https://repos.curseforge.com/wow/libstub/trunk
   Libs/LibChroMacro:
     url: https://github.com/Snakybo/LibChroMacro
 
@@ -15,7 +20,7 @@ move-folders:
   <ADDON>/Libs/LibChroMacro/LibChroMacro: <ADDON>/Libs/LibChroMacro
 ```
 
-Replace `<ADDON>` for your addon name, and simply add `Libs\LibChroMacro\LibChroMacro.xml` to your TOC file.
+Replace `<ADDON>` for your addon name, and simply add the libraries to your TOC file.
 
 ### Usage
 
