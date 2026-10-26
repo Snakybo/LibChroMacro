@@ -24,12 +24,12 @@ if LibStub == nil then
 	return
 end
 
-local Type, Version = "ChroMacroEditBox", 1
+local TYPE, VERSION = "ChroMacroEditBox", 1
 
 local AceGUI = LibStub("AceGUI-3.0", true)
 local LibChroMacro = LibStub("LibChroMacro", true)
 
-if AceGUI == nil or LibChroMacro == nil or (AceGUI:GetWidgetVersion(Type) or 0) >= Version then
+if AceGUI == nil or LibChroMacro == nil or (AceGUI:GetWidgetVersion(TYPE) or 0) >= VERSION then
 	return
 end
 
@@ -46,7 +46,7 @@ local ChroMacroEditBox = {}
 
 --- @protected
 function ChroMacroEditBox:OnAcquire()
-	self:BaseOnAcquire()
+	self:MultiLineEditBoxOnAcquire()
 
 	self.colorTable = LibChroMacro:GetDefaultColorTable()
 	self.debounce = nil
@@ -187,26 +187,25 @@ function ChroMacroEditBox.EditBox_OnTextChanged(frame, userInput)
 	self.button:Enable()
 	self:Update(false)
 end
-
---- @private
-function ChroMacroEditBox.NewColoredMacroEditBox()
+--[[-----------------------------------------------------------------------------
+Constructor
+-------------------------------------------------------------------------------]]
+local function Constructor()
 	--- @class ChroMacroEditBox
 	local widget = AceGUI:Create("MultiLineEditBox")
-	widget.type = Type
+	widget.type = TYPE
 
 	widget.button:SetScript("OnClick", ChroMacroEditBox.Button_OnClick)
 	widget.editBox:SetScript("OnTextChanged", ChroMacroEditBox.EditBox_OnTextChanged)
 
 	--- @private
-	widget.BaseOnAcquire = widget.OnAcquire
+	widget.MultiLineEditBoxOnAcquire = widget.OnAcquire
 
 	for method, func in pairs(ChroMacroEditBox) do
-		if method ~= "NewColoredMacroEditBox" then
-			widget[method] = func
-		end
+		widget[method] = func
 	end
 
 	return AceGUI:RegisterAsWidget(widget)
 end
 
-AceGUI:RegisterWidgetType(Type, ChroMacroEditBox.NewColoredMacroEditBox, Version)
+AceGUI:RegisterWidgetType(TYPE, Constructor, VERSION)
